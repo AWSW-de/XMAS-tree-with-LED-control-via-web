@@ -6,8 +6,6 @@
 // #
 // # Released under license: GNU General Public License v3.0: https://github.com/AWSW-de/XMAS-tree-with-LED-control-via-web/blob/main/LICENSE
 // #
-// # Compatible with code version: V1.0.1
-// #
 // ###############################################################################################################################
 /*
       ___           ___           ___           ___                    ___           ___           ___           ___                    ___                       ___           ___              
@@ -40,7 +38,7 @@
 // # Code version:
 // #
 // ###############################################################################################################################
-String code_version = "V1.0.0";
+String code_version = "V1.0.2";
 
 
 // ###############################################################################################################################
@@ -68,11 +66,6 @@ String code_version = "V1.0.0";
 #define N_PIXELS 12  // Number of pixels in strand
 #define BAT_PIN A0   // Battery level monitor via analog pin
 #define LED_PIN D2   // NeoPixel LED strand is connected to this pin
-
-
-// BATTERY:
-unsigned int raw = 0;
-float volt = 0.0;
 
 
 // ###############################################################################################################################
@@ -397,7 +390,7 @@ void checkClient() {
             }
             client.println("<label for='idColor0'>" + txtVU1 + "</label>");
             client.println("</div>");
-            client.println("<div>");
+            /* client.println("<div>");
             client.println("<input type='radio' id='idColor1' name='ModeLED' value='1'");
             if (ModeLED == 1) {
               client.print(" checked");
@@ -426,7 +419,7 @@ void checkClient() {
               client.print(">");
             }
             client.println("<label for='idColor3'>" + txtAnm3 + "</label>");
-            client.println("</div>");
+            client.println("</div>"); */
             client.println("</fieldset>");
             client.println("<br><br><hr>");
 
@@ -725,13 +718,16 @@ void ESPWifiReset() {
 // ###########################################################################################################################################
 long myTimer1 = 0;
 long myTimeout1 = 10000;
+unsigned int raw = 0;
+float volt = 0.0;
+bool BlinkYellow = false;
+bool BlinkOrange = false;
+bool BlinkRed = false;
 void GetBatteryLevel() {
   if (millis() > myTimeout1 + myTimer1) {
     myTimer1 = millis();
-
     uint8_t percentage = 100;
     float voltage = analogRead(BAT_PIN) / 1023.0 * 4.5;
-
     if (voltage > 1) {
       Serial.println("Battery voltage = " + String(voltage) + "V");
       percentage = 2836.9625 * pow(voltage, 4) - 43987.4889 * pow(voltage, 3) + 255233.8134 * pow(voltage, 2) - 656689.7123 * voltage + 632041.7303;
@@ -739,10 +735,18 @@ void GetBatteryLevel() {
       if (voltage <= 3.50) percentage = 0;
       Serial.println("Battery percentage = " + String(percentage) + "%");
     }
-
-    if (percentage <= 30) BatteryBlink(LEDs.Color(255, 255, 0));
-    if (percentage <= 20) BatteryBlink(LEDs.Color(255, 128, 0));
-    if (percentage <= 10) BatteryBlink(LEDs.Color(255, 0, 0));
+    if (percentage == 30 && BlinkYellow == false) {
+      BlinkYellow = true;
+      BatteryBlink(LEDs.Color(255, 255, 0));  // Blink yellow
+    }
+    if (percentage == 20 && BlinkOrange == false) {
+      BlinkOrange = true;
+      BatteryBlink(LEDs.Color(255, 128, 0));  // Blink orange
+    }
+    if (percentage == 10 && BlinkRed == false) {
+      BlinkRed = true;
+      BatteryBlink(LEDs.Color(255, 0, 0));  // Blink red
+    }
   }
 }
 

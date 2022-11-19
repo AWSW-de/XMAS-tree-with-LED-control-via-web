@@ -6,7 +6,7 @@
 // #
 // # Released under license: GNU General Public License v3.0: https://github.com/AWSW-de/XMAS-tree-with-LED-control-via-web/blob/main/LICENSE
 // #
-// # Compatible with code version: V1.0.1
+// # Compatible with code version: V1.0.2
 // #
 // ###############################################################################################################################
 
