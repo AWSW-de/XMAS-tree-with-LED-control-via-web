@@ -83,7 +83,7 @@ int intensity = 42;  // Default LED intensity (0..255)
 String header;            // Variable to store the HTTP request
 int switchLangWeb = 0;    // Language default setting (0 = german, 1 = english, 2...x = for future use)
 int ModeLED = 0;          // Variable to store the selected color mode to
-String txtBattery = "-";  // Battery level value for web configuration
+String txtBattery = "tbd";  // Battery level value for web configuration
 Adafruit_NeoPixel LEDs = Adafruit_NeoPixel(N_PIXELS, LED_PIN, NEO_GRB + NEO_KHZ800);
 
 
@@ -748,11 +748,11 @@ void GetBatteryLevel() {
       BlinkYellow = true;
       BatteryBlink(LEDs.Color(255, 255, 0));  // Blink yellow
     }
-    if (percentage == 20 && percentage >= 11 && BlinkOrange == false) {
+    if (percentage <= 20 && percentage >= 11 && BlinkOrange == false) {
       BlinkOrange = true;
       BatteryBlink(LEDs.Color(255, 128, 0));  // Blink orange
     }
-    if (percentage == 10 && percentage >= 2 && BlinkRed == false) {
+    if (percentage <= 10 && percentage >= 2 && BlinkRed == false) {
       BlinkRed = true;
       BatteryBlink(LEDs.Color(255, 0, 0));  // Blink red
     }
