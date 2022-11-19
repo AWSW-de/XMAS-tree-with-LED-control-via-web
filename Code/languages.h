@@ -2,11 +2,11 @@
 // #
 // # Code for the printables "XMAS tree with LED control via web" project: https://www.printables.com/de/model/320339-xmas-tree-with-led-control-via-web
 // #
-// # Code by https://github.com/AWSW-de 
+// # Code by https://github.com/AWSW-de
 // #
 // # Released under license: GNU General Public License v3.0: https://github.com/AWSW-de/XMAS-tree-with-LED-control-via-web/blob/main/LICENSE
 // #
-// # Compatible with code version: V1.0.2
+// # Compatible with code version: V1.0.3
 // #
 // ###############################################################################################################################
 
@@ -27,6 +27,8 @@ String txtRestart0, txtRestart1;
 // Colors and animations:
 String txtVU1, txtAnm1, txtAnm2, txtAnm3, txtVUandAnm;
 String txtVU1lbl, txtAnm1lbl, txtAnm2lbl, txtAnm3lbl;
+// Battery level:
+String txtBatteryLevel;
 
 
 void setLanguage(int lang) {
@@ -69,6 +71,9 @@ void setLanguage(int lang) {
     txtAnm1lbl = "Weißes Flackern";
     txtAnm2lbl = "Regenbogen";
     txtAnm3lbl = "Regenbogen Flackern";
+
+    // Batterie Stand:
+    txtBatteryLevel = "Akku Stand";
   }
 
 
@@ -111,6 +116,9 @@ void setLanguage(int lang) {
     txtAnm1lbl = "White flicker";
     txtAnm2lbl = "Rainbow";
     txtAnm3lbl = "Rainbow flicker";
+
+    // Battery level:
+    txtBatteryLevel = "Battery level";
   }
 }
 // ###############################################################################################################################
