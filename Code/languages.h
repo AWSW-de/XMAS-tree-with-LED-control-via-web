@@ -36,7 +36,7 @@ void setLanguage(int lang) {
   if (lang == 0) {  // DEUTSCH
     // Allgemeine Texte:
     ProjectName = "XMASTREELED";
-    ProjectNameLong = "XMAS tree with LED control via web";
+    ProjectNameLong = "LED Weihnachtsbaum";
     languageSelect = "Sprache";
     languageInt0 = "Deutsch";
     languageInt1 = "Englisch";
@@ -61,7 +61,7 @@ void setLanguage(int lang) {
 
     // VU-meters and animations:
     txtVUandAnm = "Auswahl Farbe und Animationen";
-    txtVU1 = "Farbe";
+    txtVU1 = "Benutzer definierte Farbe";
     txtAnm1 = "Animation 1";
     txtAnm2 = "Animation 2";
     txtAnm3 = "Animation 3";
@@ -78,7 +78,7 @@ void setLanguage(int lang) {
   if (lang == 1) {  // ENGLISH
     // General texts:
     ProjectName = "XMASTREELED";
-    ProjectNameLong = "XMAS tree with LED control via web";
+    ProjectNameLong = "LED XMAS tree";
     languageSelect = "Language";
     languageInt0 = "German";
     languageInt1 = "English";
@@ -103,7 +103,7 @@ void setLanguage(int lang) {
 
     // VU-meters and animations:
     txtVUandAnm = "Color selection and animations";
-    txtVU1 = "VU meter 1";
+    txtVU1 = "User selected color";
     txtAnm1 = "Animation 1";
     txtAnm2 = "Animation 2";
     txtAnm3 = "Animation 3";

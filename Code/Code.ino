@@ -69,6 +69,12 @@ String code_version = "V1.0.0";
 #define BAT_PIN A0   // Battery level monitor via analog pin
 #define LED_PIN D2   // NeoPixel LED strand is connected to this pin
 
+
+// BATTERY:
+unsigned int raw = 0;
+float volt = 0.0;
+
+
 // ###############################################################################################################################
 // # LED default settings:
 // ###############################################################################################################################
@@ -83,10 +89,8 @@ int intensity = 42;  // Default LED intensity (0..255)
 // ###############################################################################################################################
 String header;          // Variable to store the HTTP request
 int switchLangWeb = 0;  // Language default setting (0 = german, 1 = english, 2...x = for future use)
-
-int ModeLED = 1;
-  
-  Adafruit_NeoPixel LEDs = Adafruit_NeoPixel(N_PIXELS, LED_PIN, NEO_GRB + NEO_KHZ800);
+int ModeLED = 0;        // Variable to store the selected color mode to
+Adafruit_NeoPixel LEDs = Adafruit_NeoPixel(N_PIXELS, LED_PIN, NEO_GRB + NEO_KHZ800);
 
 
 // ###############################################################################################################################
@@ -97,7 +101,7 @@ ESP8266WebServer httpServer(2022);          // Update server port
 WiFiServer server(80);                      // Set web server port number to 80
 String UpdatePath = "-";                    // Update via Hostname
 String UpdatePathIP = "-";                  // Update via IP-address
-#define DEFAULT_AP_NAME "XMASTREELED"       // WiFi access point name of the ESP8266
+#define DEFAULT_AP_NAME "XMASTREE"          // WiFi access point name of the ESP8266
 #define AP_TIMEOUT 240                      // Timeout in seconds for AP / WLAN config
 std::unique_ptr<ESP8266WebServer> server1;  // REST function web server
 
@@ -122,13 +126,14 @@ struct parmRec {
 void setup() {
   Serial.begin(115200);
   delay(1000);
-  readEEPROM();  // get persistent data from EEPROM
+  pinMode(BAT_PIN, INPUT);  // Battery
+  readEEPROM();             // get persistent data from EEPROM
   LEDs.begin();
-  Serial.println("#######################################");
+  Serial.println("##############################################");
   Serial.print("# XMAS tree with LED control via web: ");
   Serial.print(code_version);
   Serial.println(" #");
-  Serial.println("#######################################");
+  Serial.println("##############################################");
 
   // WiFiManager:
   show_wifi(LEDs.Color(0, 0, 255));
@@ -182,8 +187,8 @@ void setup() {
   // Load set language:
   setLanguage(switchLangWeb);
 
-  // LED Test:
-  rainbow(10);
+  // Read battery level:
+  GetBatteryLevel();
 }
 
 
@@ -191,52 +196,36 @@ void setup() {
 // # Loop funtion to run all the time:
 // ###############################################################################################################################
 void loop() {
-  ESP.wdtFeed();  // Reset watchdog timer
-
   LEDs.setBrightness(intensity);
 
-
- /* case 1:
-    buttonCount = 1;
-    if (ModeLED) {
-      vu_meter7();  // VU meter 7 - Lines Coloured
-    break;*/
- 
- /*  case 10:
-    buttonCount = 10;
-    if (ModeLED7) {
+  // Check for LED mode:
+  switch (ModeLED) {
+    case 0:
+      UserColor();  // User selected color
+      break;
+    case 1:
       theaterChase(LEDs.Color(127, 127, 127), 50);  // White flickering LED function (Adafruit NeoPixel demo)
-    } else {
-      buttonCount = buttonCount + 1;
-    }
-    break;
-  case 11:
-    buttonCount = 11;
-    if (ModeLED8) {
+      break;
+    case 2:
       rainbow(10);  // Rainbow LED function (Adafruit NeoPixel demo)
-    } else {
-      buttonCount = buttonCount + 1;
-    }
-    break;
-  case 12:
-    buttonCount = 12;
-    if (ModeLED9) {
+      break;
+    case 3:
       theaterChaseRainbow(50);  // Flickering rainbow LED function (Adafruit NeoPixel demo)
-    } else {
-      buttonCount = buttonCount + 1;
-    }
-    break;
-}*/
+      break;
+  }
 
-// Check, whether something has been entered on Config Page
-checkClient();
+  // Check, whether something has been entered on Config Page
+  checkClient();
 
-// Web update start:
-httpServer.handleClient();
-MDNS.update();
+  // Web update start:
+  httpServer.handleClient();
+  MDNS.update();
 
-// REST function web server:
-server1->handleClient();
+  // REST function web server:
+  server1->handleClient();
+
+  // Get battery level:
+  GetBatteryLevel();
 }
 
 
@@ -384,55 +373,63 @@ void checkClient() {
             // Intensity:
             // ##############
             client.print("<label for=\"intensity\">" + txtIntensity + ": </label>");
-            client.print("<input type='range' min='1' max='128' name='intensity' value=");         // Limited to 128 to avoid to much power usage of the power supply
-            client.print(intensity);                                                               // set the value of the slider based upon the previous page load value
-            client.println(" style='height:30px; width:200px' oninput='showValue(this.value)'>");  // was onchange event
+            client.print("<input type='range' min='1' max='128' name='intensity' value=");
+            client.print(intensity);
+            client.println(" style='height:30px; width:200px' oninput='showValue(this.value)'>");
             client.print("<span id='valrange'>");
-            client.print(intensity);  // set the javascript initial value
+            client.print(intensity);
             client.println("</span>");
             client.println("<script type='text/javascript'>\r\nfunction showValue(newValue)\r\n{\r\ndocument.getElementById('valrange').innerHTML=newValue;\r\n}\r\n</script>\r\n");
             client.println("</label><br><hr>");
 
 
-            // VU meter and animations:
+            // Color mode and animations:
             // ########################
-            client.println("<h2>" + txtVUandAnm + ":</h2>");
-            client.println("<label for=\"ModeLED\">" + txtVU1 + ": </label>");
-            client.print("<input type=\"checkbox\" id=\"ModeLED\" name=\"ModeLED\"");
-            if (ModeLED) {
+            client.println("<br><label for=\"ModeLED\"><h2>" + txtVUandAnm + ":</h2></label>");
+            client.println("<fieldset>");
+            client.println("<div>");
+            client.println("<input type='radio' id='idColor0' name='ModeLED' value='0'");
+            if (ModeLED == 0) {
               client.print(" checked");
-              client.print("> " + txtVU1lbl + "<br><br>");
+              client.print(">");
             } else {
-              client.print("> " + txtVU1lbl + "<br><br>");
+              client.print(">");
             }
+            client.println("<label for='idColor0'>" + txtVU1 + "</label>");
+            client.println("</div>");
+            client.println("<div>");
+            client.println("<input type='radio' id='idColor1' name='ModeLED' value='1'");
+            if (ModeLED == 1) {
+              client.print(" checked");
+              client.print(">");
+            } else {
+              client.print(">");
+            }
+            client.println("<label for='idColor1'>" + txtAnm1 + "</label>");
+            client.println("</div>");
+            client.println("<div>");
+            client.println("<input type='radio' id='idColor2' name='ModeLED' value='2'");
+            if (ModeLED == 2) {
+              client.print(" checked");
+              client.print(">");
+            } else {
+              client.print(">");
+            }
+            client.println("<label for='idColor2'>" + txtAnm2 + "</label>");
+            client.println("</div>");
+            client.println("<div>");
+            client.println("<input type='radio' id='idColor3' name='ModeLED' value='3'");
+            if (ModeLED == 3) {
+              client.print(" checked");
+              client.print(">");
+            } else {
+              client.print(">");
+            }
+            client.println("<label for='idColor3'>" + txtAnm3 + "</label>");
+            client.println("</div>");
+            client.println("</fieldset>");
+            client.println("<br><br><hr>");
 
-            client.println("<label for=\"ModeLED7\">" + txtAnm1 + ": </label>");
-            client.print("<input type=\"checkbox\" id=\"ModeLED7\" name=\"ModeLED7\"");
-            if (ModeLED7) {
-              client.print(" checked");
-              client.print("> " + txtAnm1lbl + "<br><br>");
-            } else {
-              client.print("> " + txtAnm1lbl + "<br><br>");
-            }
-
-            client.println("<label for=\"ModeLED8\">" + txtAnm2 + ": </label>");
-            client.print("<input type=\"checkbox\" id=\"ModeLED8\" name=\"ModeLED8\"");
-            if (ModeLED8) {
-              client.print(" checked");
-              client.print("> " + txtAnm2lbl + "<br><br>");
-            } else {
-              client.print("> " + txtAnm2lbl + "<br><br>");
-            }
-
-            client.println("<label for=\"ModeLED9\">" + txtAnm3 + ": </label>");
-            client.print("<input type=\"checkbox\" id=\"ModeLED9\" name=\"ModeLED9\"");
-            if (ModeLED9) {
-              client.print(" checked");
-              client.print("> " + txtAnm3lbl + "<br><br>");
-            } else {
-              client.print("> " + txtAnm3lbl + "<br><br>");
-            }
-            client.print("<hr>");
 
             // Update function:
             // ################
@@ -442,7 +439,8 @@ void checkClient() {
             client.println("<a href=" + UpdatePathIP + " target='_blank'>" + UpdatePathIP + "</a><br><br>");
             client.println("<label>" + txtUpdate3 + "</label><br>");
             client.println("<br><br><label>" + txtUpdate4 + ":</label>");
-            client.println("<a href='https://github.com/AWSW-de/Music-reactive-LEDs-LED-cube' target='_blank'>" + txtUpdate5 + "</a><br><hr>");
+            client.println("<a href='https://github.com/AWSW-de/XMAS-tree-with-LED-control-via-web' target='_blank'>" + txtUpdate5 + "</a><br><hr>");
+
 
             // Language selection:
             // ###################
@@ -471,11 +469,13 @@ void checkClient() {
             client.println("</fieldset>");
             client.println("<br><br><hr>");
 
+
             // Reset WiFi configuration:
             // #########################
             client.println("<h2>" + txtWiFi0 + ":</h2><br>");
             client.println("<label>" + txtWiFi1 + "</label><br>");
             client.println("<br><a href= http://" + WiFi.localIP().toString() + ":55555/espwifireset target='_blank'>" + txtWiFi0 + "</a><br><br><hr>");
+
 
             // Save settings button:
             // #####################
@@ -510,11 +510,15 @@ void checkClient() {
 
               // Check for ModeLED:
               // ##################
-              if (currentLine.indexOf("&ModeLED=on") >= 0) {
-                ModeLED = 1;
-              } else {
-                ModeLED = 0;
+              pos = currentLine.indexOf("&ModeLED=");
+              if (pos >= 0) {
+                String ModeLEDStr = currentLine.substring(pos + 9);
+                pos = ModeLEDStr.indexOf("&");
+                if (pos > 0)
+                  ModeLEDStr = ModeLEDStr.substring(0, pos);
+                ModeLED = ModeLEDStr.toInt();
               }
+
 
               // Check for language setting:
               // ###########################
@@ -564,8 +568,8 @@ void checkClient() {
 // # User selected color
 // ###############################################################################################################################
 void UserColor() {
-for (int i = 0; i = N_PIXELS; i++) {
-    LEDs.setPixelColor(i, LEDs.Color(redVal, greenVal, blueVal);
+  for (int i = 0; i < N_PIXELS; i++) {
+    LEDs.setPixelColor(i, LEDs.Color(redVal, greenVal, blueVal));
   }
   LEDs.show();
 }
@@ -645,10 +649,9 @@ void theaterChaseRainbow(int wait) {
 // # Show WiFi status icon:
 // ###############################################################################################################################
 void show_wifi(uint32_t color) {
-  LEDs.setBrightness(15);
-  int myArray[] = { 0, 7, 56, 63, 64, 71, 120, 127 };
-  for (int element : myArray) {
-    LEDs.setPixelColor(element, color);
+  LEDs.setBrightness(42);
+  for (int i = 0; i < N_PIXELS; i++) {
+    LEDs.setPixelColor(i, color);
   }
   LEDs.show();
 }
@@ -676,7 +679,7 @@ uint32_t Wheel(byte WheelPos) {
 // # Color Wipe function:
 // ###############################################################################################################################
 void colorWipe(uint32_t color, uint8_t wait) {
-  for (uint16_t i = 0; i < LEDs.numPixels(); i++) {
+  for (uint16_t i = 0; i < N_PIXELS; i++) {
     LEDs.setPixelColor(i, color);
   }
   LEDs.show();
@@ -714,6 +717,52 @@ void ESPWifiReset() {
   Serial.println("################################################################################################");
   delay(3000);
   ESP.restart();
+}
+
+
+// ###########################################################################################################################################
+// # Read the current battery level and notify in case it gets low:
+// ###########################################################################################################################################
+long myTimer1 = 0;
+long myTimeout1 = 10000;
+void GetBatteryLevel() {
+  if (millis() > myTimeout1 + myTimer1) {
+    myTimer1 = millis();
+
+    uint8_t percentage = 100;
+    float voltage = analogRead(BAT_PIN) / 1023.0 * 4.5;
+
+    if (voltage > 1) {
+      Serial.println("Battery voltage = " + String(voltage) + "V");
+      percentage = 2836.9625 * pow(voltage, 4) - 43987.4889 * pow(voltage, 3) + 255233.8134 * pow(voltage, 2) - 656689.7123 * voltage + 632041.7303;
+      if (voltage >= 4.20) percentage = 100;
+      if (voltage <= 3.50) percentage = 0;
+      Serial.println("Battery percentage = " + String(percentage) + "%");
+    }
+
+    if (percentage <= 30) BatteryBlink(LEDs.Color(255, 255, 0));
+    if (percentage <= 20) BatteryBlink(LEDs.Color(255, 128, 0));
+    if (percentage <= 10) BatteryBlink(LEDs.Color(255, 0, 0));
+  }
+}
+
+
+// ###########################################################################################################################################
+// # Battery level get low... Blink the LEDs
+// ###########################################################################################################################################
+void BatteryBlink(uint32_t color) {
+  for (int a = 0; a < 6; a++) {
+    for (int i = 0; i < N_PIXELS; i++) {
+      LEDs.setPixelColor(i, LEDs.Color(0, 0, 0));
+    }
+    LEDs.show();
+    delay(1000);
+    for (int i = 0; i < N_PIXELS; i++) {
+      LEDs.setPixelColor(i, color);
+    }
+    LEDs.show();
+    delay(1000);
+  }
 }
 
 
